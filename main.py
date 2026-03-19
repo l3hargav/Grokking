@@ -126,6 +126,12 @@ for epoch in range(30000):
     val_losses.append(val_loss)
     val_accs.append(val_acc)
 
+    if epoch == 1000:
+        torch.save(model.state_dict(), "model_early_memorization.pth")
+
+    if epoch == 2500:
+        torch.save(model.state_dict(), "model_deep_plateau.pth")
+
     if epoch == 5000:
         torch.save(model.state_dict(), "model_pre_grokking.pth")
     

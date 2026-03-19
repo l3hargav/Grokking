@@ -1,6 +1,6 @@
 # Grokking
 
-Trying to figure out why it happens.
+Trying to figure out why it happens. Grokking is a phenomenon wherein, a model (transformer in this case) initially fully "memorizes" the training dataset and thus overfits, after thousands of epochs is able to generalize perfectly to the validation set, which it has never seen before. To reproduce this, a train-test split of 20/80 is used, i.e only 20% of the full dataset is given to the model at training. This is a very interesting phenomenon as the model seemingly over just a few epochs towards the end, is able to perfectly generalize and understand the underlying mathematical principles.
 
 ## Setup
 Transformer Architecture is as follows:

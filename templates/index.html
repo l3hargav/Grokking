@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lesion Lab — Transformer Circuit Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0a0c10;
+      --surface:   #111418;
+      --border:    #1e2530;
+      --muted:     #3a4455;
+      --text:      #c8d0de;
+      --bright:    #eef2ff;
+      --accent:    #4af0c4;
+      --danger:    #ff4d6d;
+      --warn:      #ffb347;
+      --head-col:  #7b9cff;
+      --neutral:   #2a3240;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+      pointer-events: none;
+      z-index: 1000;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--bright);
+      letter-spacing: -0.5px;
+    }
+    header h1 span { color: var(--accent); }
+    header p { color: var(--muted); font-size: 11px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      height: calc(100vh - 63px);
+    }
+    .left-panel {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .panel-section {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-section h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    .ckpt-btn {
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      margin-bottom: 5px;
+      background: var(--neutral);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .ckpt-btn:hover { border-color: var(--muted); color: var(--bright); }
+    .ckpt-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(74,240,196,0.07); }
+    .ckpt-btn .baseline-tag { float: right; color: var(--muted); font-size: 10px; }
+    .ckpt-btn.active .baseline-tag { color: var(--accent); opacity: 0.7; }
+    .stat-block { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .stat { background: var(--neutral); border: 1px solid var(--border); border-radius: 4px; padding: 10px; }
+    .stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+    .stat-value { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--bright); }
+    .stat-value.good { color: var(--accent); }
+    .stat-value.bad  { color: var(--danger); }
+    .stat-value.warn { color: var(--warn); }
+    .acc-bar-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-bottom: 4px; }
+    .acc-bar-track { height: 7px; background: var(--neutral); border-radius: 4px; overflow: hidden; position: relative; }
+    .acc-bar-baseline { position: absolute; height: 100%; background: var(--muted); border-radius: 4px; transition: width 0.4s; }
+    .acc-bar-current  { position: absolute; height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.4s; }
+    .topk-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .topk-row label { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .topk-row span  { color: var(--accent); font-size: 13px; min-width: 28px; }
+    input[type=range] { flex: 1; -webkit-appearance: none; height: 3px; background: var(--border); border-radius: 2px; outline: none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+    .btn { padding: 7px 13px; border: 1px solid; border-radius: 3px; font-family: 'Space Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+    .btn-accent { background: rgba(74,240,196,0.1); border-color: var(--accent); color: var(--accent); }
+    .btn-accent:hover { background: rgba(74,240,196,0.2); }
+    .btn-danger { background: rgba(255,77,109,0.08); border-color: var(--danger); color: var(--danger); }
+    .btn-muted  { background: transparent; border-color: var(--border); color: var(--muted); }
+    .btn-muted:hover { border-color: var(--muted); color: var(--text); }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .head-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .head-btn { padding: 8px 4px; background: var(--neutral); border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 11px; cursor: pointer; text-align: center; transition: all 0.15s; }
+    .head-btn:hover  { border-color: var(--head-col); color: var(--head-col); }
+    .head-btn.ablated { background: rgba(123,156,255,0.15); border-color: var(--head-col); color: var(--head-col); }
+    #run-btn { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 4px; color: var(--bg); font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; cursor: pointer; letter-spacing: 1px; transition: all 0.15s; }
+    #run-btn:hover    { background: #6fffd8; }
+    #run-btn:disabled { background: var(--muted); cursor: not-allowed; }
+    .loading-dot { display: inline-block; width: 6px; height: 6px; background: var(--bg); border-radius: 50%; margin: 0 2px; animation: blink 1s infinite; }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100% { opacity: 0.2; } 40% { opacity: 1; } }
+    .count-tag { display: inline-block; padding: 2px 8px; background: rgba(74,240,196,0.1); border: 1px solid rgba(74,240,196,0.3); border-radius: 10px; color: var(--accent); font-size: 10px; margin-left: 8px; }
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+    .grid-header { padding: 14px 24px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .grid-header h2 { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
+    .legend { display: flex; align-items: center; gap: 12px; margin-left: auto; font-size: 10px; color: var(--muted); }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-swatch { width: 11px; height: 11px; border-radius: 2px; }
+    .grid-container { flex: 1; overflow-y: auto; padding: 18px 24px; }
+    #neuron-grid { display: grid; grid-template-columns: repeat(32, 1fr); gap: 3px; }
+    .neuron-cell { aspect-ratio: 1; border-radius: 2px; cursor: pointer; border: 1px solid transparent; transition: transform 0.1s, border-color 0.1s; }
+    .neuron-cell:hover  { transform: scale(1.5); z-index: 10; border-color: white !important; }
+    .neuron-cell.selected { border-color: var(--bright) !important; box-shadow: 0 0 5px rgba(255,255,255,0.35); }
+    .tooltip { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 7px 11px; font-size: 11px; color: var(--text); pointer-events: none; z-index: 9999; display: none; white-space: nowrap; }
+    .tooltip strong { color: var(--bright); }
+    .tooltip .tip-drop { color: var(--danger); }
+    .history-panel { border-top: 1px solid var(--border); padding: 10px 24px; max-height: 120px; overflow-y: auto; flex-shrink: 0; }
+    .history-panel h3 { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+    .history-entry { display: flex; align-items: center; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--muted); animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; } }
+    .history-entry .h-ckpt { color: var(--text); }
+    .history-entry .h-acc  { color: var(--accent); font-weight: bold; }
+    .history-entry .h-drop { color: var(--danger); }
+    .history-entry .h-n    { color: var(--warn); }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Lesion <span>Lab</span></h1>
+  <p>transformer circuit explorer // grokking study</p>
+</header>
+
+<div class="layout">
+
+  <aside class="left-panel">
+
+    <div class="panel-section">
+      <h2>Checkpoint</h2>
+      {% for ckpt in checkpoints %}
+      <button class="ckpt-btn {% if loop.first %}active{% endif %}"
+              data-ckpt="{{ ckpt }}"
+              onclick="selectCheckpoint(this)">
+        {{ ckpt }}
+        <span class="baseline-tag">{{ "%.3f"|format(baselines[ckpt]) }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="panel-section">
+      <h2>Results</h2>
+      <div class="stat-block">
+        <div class="stat">
+          <div class="stat-label">Baseline</div>
+          <div class="stat-value" id="stat-baseline">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Ablated</div>
+          <div class="stat-value" id="stat-ablated">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Drop</div>
+          <div class="stat-value" id="stat-drop">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Selected</div>
+          <div class="stat-value" id="stat-selected">0</div>
+        </div>
+      </div>
+      <div>
+        <div class="acc-bar-labels">
+          <span>0%</span>
+          <span id="bar-label-baseline">baseline</span>
+          <span>100%</span>
+        </div>
+        <div class="acc-bar-track">
+          <div class="acc-bar-baseline" id="bar-baseline" style="width:0%"></div>
+          <div class="acc-bar-current"  id="bar-current"  style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h2>Auto-select top-k neurons</h2>
+      <div class="topk-row">
+        <label>k =</label>
+        <input type="range" id="topk-slider" min="1" max="512" value="20"
+               oninput="document.getElementById('topk-val').textContent = this.value">
+        <span id="topk-val">20</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-accent" onclick="applyTopK()">Apply top-k</button>
+        <button class="btn btn-muted"  onclick="clearNeurons()">Clear</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h2>Attention heads</h2>
+      <div class="head-grid">
+        {% for i in range(n_heads) %}
+        <button class="head-btn" data-head="{{ i }}" onclick="toggleHead(this)">H{{ i }}</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <button id="run-btn" onclick="runAblation()">RUN ABLATION</button>
+    </div>
+
+  </aside>
+
+  <div class="right-panel">
+    <div class="grid-header">
+      <h2>MLP Neurons (512) <span class="count-tag" id="selected-count">0 selected</span></h2>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#1a2030"></div>
+          low importance
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:#ff6b35"></div>
+          high importance
+        </div>
+        <div class="legend-item">
+          <div class="legend-swatch" style="background:white; border:1px solid #555"></div>
+          selected
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-container">
+      <div id="neuron-grid"></div>
+    </div>
+
+    <div class="history-panel">
+      <h3>Run History</h3>
+      <div id="history-log"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  const CHECKPOINTS   = {{ checkpoints | tojson }};
+  const BASELINES     = {{ baselines | tojson }};
+  const NEURON_SCORES = {{ neuron_scores | tojson }};
+  const FFN_DIM = {{ ffn_dim }};
+  const N_HEADS = {{ n_heads }};
+
+  let currentCkpt   = CHECKPOINTS[0];
+  let selectedNeurons = new Set();
+  let selectedHeads   = new Set();
+
+  function buildGrid(ckptName) {
+    const grid = document.getElementById('neuron-grid');
+    grid.innerHTML = '';
+    const scores = NEURON_SCORES[ckptName] || new Array(FFN_DIM).fill(0);
+    const maxScore = Math.max(...scores) || 1e-9;
+
+    for (let i = 0; i < FFN_DIM; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'neuron-cell';
+      cell.dataset.idx   = i;
+      cell.dataset.score = scores[i].toFixed(6);
+
+      const t = Math.pow(Math.max(0, scores[i]) / maxScore, 0.45);
+      const r = Math.round(20  + t * 235);
+      const g = Math.round(30  + t * 55);
+      const b = Math.round(48  + t * (20 - 48));
+      cell.style.background = `rgb(${r},${g},${b})`;
+
+      if (selectedNeurons.has(i)) cell.classList.add('selected');
+
+      cell.addEventListener('click',      () => toggleNeuron(cell, i));
+      cell.addEventListener('mouseenter', (e) => showTooltip(e, i, scores[i], maxScore));
+      cell.addEventListener('mouseleave', hideTooltip);
+      grid.appendChild(cell);
+    }
+    updateSelectedCount();
+  }
+
+  function toggleNeuron(cell, idx) {
+    if (selectedNeurons.has(idx)) {
+      selectedNeurons.delete(idx);
+      cell.classList.remove('selected');
+    } else {
+      selectedNeurons.add(idx);
+      cell.classList.add('selected');
+    }
+    updateSelectedCount();
+  }
+
+  function updateSelectedCount() {
+    const n = selectedNeurons.size;
+    document.getElementById('selected-count').textContent = `${n} selected`;
+    document.getElementById('stat-selected').textContent  = n;
+  }
+
+  function selectCheckpoint(btn) {
+    document.querySelectorAll('.ckpt-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCkpt = btn.dataset.ckpt;
+    selectedNeurons.clear();
+    buildGrid(currentCkpt);
+    resetStats();
+  }
+
+  function resetStats() {
+    const b = BASELINES[currentCkpt];
+    document.getElementById('stat-baseline').textContent = b.toFixed(3);
+    document.getElementById('stat-baseline').className   = 'stat-value';
+    document.getElementById('stat-ablated').textContent  = '—';
+    document.getElementById('stat-drop').textContent     = '—';
+    document.getElementById('stat-drop').className       = 'stat-value';
+    document.getElementById('bar-baseline').style.width  = (b * 100) + '%';
+    document.getElementById('bar-current').style.width   = (b * 100) + '%';
+    document.getElementById('bar-current').style.background = 'var(--accent)';
+    document.getElementById('bar-label-baseline').textContent = `baseline ${(b*100).toFixed(1)}%`;
+  }
+
+  async function applyTopK() {
+    const k = parseInt(document.getElementById('topk-slider').value);
+    const res = await fetch('/top_k', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ checkpoint: currentCkpt, k })
+    });
+    const data = await res.json();
+    selectedNeurons.clear();
+    data.indices.forEach(i => selectedNeurons.add(i));
+    document.querySelectorAll('.neuron-cell').forEach(cell => {
+      cell.classList.toggle('selected', selectedNeurons.has(parseInt(cell.dataset.idx)));
+    });
+    updateSelectedCount();
+  }
+
+  function clearNeurons() {
+    selectedNeurons.clear();
+    document.querySelectorAll('.neuron-cell').forEach(c => c.classList.remove('selected'));
+    updateSelectedCount();
+  }
+
+  function toggleHead(btn) {
+    const h = parseInt(btn.dataset.head);
+    if (selectedHeads.has(h)) { selectedHeads.delete(h); btn.classList.remove('ablated'); }
+    else                       { selectedHeads.add(h);    btn.classList.add('ablated');    }
+  }
+
+  async function runAblation() {
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>';
+    try {
+      const res = await fetch('/ablate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          checkpoint: currentCkpt,
+          neurons: Array.from(selectedNeurons),
+          heads:   Array.from(selectedHeads)
+        })
+      });
+      displayResult(await res.json());
+    } catch(e) { console.error(e); }
+    btn.disabled = false;
+    btn.textContent = 'RUN ABLATION';
+  }
+
+  function displayResult(data) {
+    const drop = data.drop;
+    const acc  = data.ablated_accuracy;
+    const base = data.baseline;
+
+    document.getElementById('stat-baseline').textContent = base.toFixed(3);
+    document.getElementById('stat-ablated').textContent  = acc.toFixed(3);
+
+    const dropEl = document.getElementById('stat-drop');
+    dropEl.textContent = drop > 0 ? `-${drop.toFixed(3)}` : `+${Math.abs(drop).toFixed(3)}`;
+    dropEl.className   = 'stat-value ' + (drop > 0.1 ? 'bad' : drop > 0.02 ? 'warn' : 'good');
+
+    document.getElementById('bar-baseline').style.width = (base * 100) + '%';
+    document.getElementById('bar-current').style.width  = (acc  * 100) + '%';
+    document.getElementById('bar-current').style.background =
+      drop > 0.1 ? 'var(--danger)' : drop > 0.02 ? 'var(--warn)' : 'var(--accent)';
+
+    const log = document.getElementById('history-log');
+    const entry = document.createElement('div');
+    entry.className = 'history-entry';
+    const desc = [];
+    if (data.n_neurons_ablated > 0) desc.push(`${data.n_neurons_ablated} neurons`);
+    if (data.n_heads_ablated   > 0) desc.push(`${data.n_heads_ablated} heads`);
+    entry.innerHTML = `
+      <span class="h-ckpt">${data.checkpoint.split(' ')[0]}</span>
+      <span class="h-n">[${desc.join(' + ') || 'none'}]</span>
+      <span class="h-acc">${(acc*100).toFixed(1)}%</span>
+      <span class="h-drop">↓${(drop*100).toFixed(1)}%</span>
+    `;
+    log.prepend(entry);
+  }
+
+  function showTooltip(e, idx, score, maxScore) {
+    const tip = document.getElementById('tooltip');
+    const pct = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : '0.0';
+    tip.innerHTML = `<strong>Neuron #${idx}</strong> &nbsp;|&nbsp; importance: <span class="tip-drop">${score.toFixed(6)}</span> (${pct}% of max)`;
+    tip.style.display = 'block';
+    moveTip(e);
+  }
+
+  function hideTooltip() { document.getElementById('tooltip').style.display = 'none'; }
+
+  document.addEventListener('mousemove', (e) => {
+    if (document.getElementById('tooltip').style.display === 'block') moveTip(e);
+  });
+
+  function moveTip(e) {
+    const tip = document.getElementById('tooltip');
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top  = (e.clientY - 28) + 'px';
+  }
+
+  buildGrid(currentCkpt);
+  resetStats();
+</script>
+</body>
+</html>

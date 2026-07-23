@@ -14,7 +14,7 @@ EQUAL_TOKEN = 97
 EMBED_DIM = 64
 N_HEADS = 4
 FFN_DIM = 512
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 class Transformer(nn.Module):
@@ -179,4 +179,4 @@ def top_k():
     return jsonify({"indices": ranked, "k": k})
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5050)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5050)))
